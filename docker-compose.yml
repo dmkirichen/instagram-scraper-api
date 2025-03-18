@@ -1,0 +1,47 @@
+version: "3.8"
+
+services:
+  fastapi:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: fastapi_app
+    ports:
+      - "8000:8000"
+    depends_on:
+      - redis
+    environment:
+      - FILTER_HASHTAGS=Telescope,BestOf
+    volumes:
+      - .:/app
+
+  redis:
+    image: redis:alpine
+    container_name: redis
+    ports:
+      - "6379:6379"
+
+  celery_worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: celery_worker
+    command: celery -A app.celery_tasks worker --loglevel=info
+    depends_on:
+      - redis
+    environment:
+      - FILTER_HASHTAGS=Telescope,BestOf
+    volumes:
+      - .:/app
+
+  celery_beat:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: celery_beat
+    command: celery -A app.celery_tasks beat --loglevel=info
+    depends_on:
+      - redis
+      - celery_worker
+    volumes:
+      - .:/app
